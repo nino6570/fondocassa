@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fondo Cassa</title>
+<meta name="theme-color" content="#1F3864">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#F0F4F8; --panel:#FFFFFF; --navy:#1F3864; --blue:#2E75B6;
+  --accent:#EBF3FB; --border:#BDD7EE; --red:#C00000; --green:#276221;
+  --muted:#6B7280; --text:#1A1A2E; --dark:#162B50;
+  --cred-bg:#C8E6C9; --cred-fg:#1B5E20; --deb-bg:#FFCDD2; --deb-fg:#B71C1C;
+  --warn-bg:#FFF9C4; --warn-fg:#E65100;
+}
+*{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif; background:var(--bg);
+     color:var(--text); padding-bottom:88px}
+header{background:var(--dark); color:#fff; padding:14px 16px calc(10px + env(safe-area-inset-top)) 16px;
+       padding-top:calc(14px + env(safe-area-inset-top)); position:sticky; top:0; z-index:20}
+header h1{font-size:17px; font-weight:700}
+header .sub{font-size:11px; color:#8BA8C8; margin-top:2px}
+.fondo-box{margin-top:10px; background:rgba(255,255,255,.08); border-radius:12px;
+           padding:10px 14px; display:flex; justify-content:space-between; align-items:center}
+.fondo-box .lbl{font-size:12px; color:#AAC4FF}
+.fondo-box .val{font-size:22px; font-weight:800; color:#7EE8A2}
+.fondo-box .val.neg{color:#FFCDD2}
+.tabs{display:flex; background:var(--navy); position:sticky; z-index:19}
+.tabs button{flex:1; padding:11px 0; background:none; border:none; color:#AAC4FF;
+             font-size:14px; font-weight:600; border-bottom:3px solid transparent}
+.tabs button.active{color:#fff; border-bottom-color:#7EE8A2}
+main{padding:14px}
+.card{background:var(--panel); border:1px solid var(--border); border-radius:12px;
+      padding:12px 14px; margin-bottom:10px}
+.kv{display:flex; justify-content:space-between; padding:7px 10px; border-radius:8px;
+    margin-bottom:6px; font-size:14px}
+.kv b{font-weight:700}
+.kv.green{background:var(--cred-bg); color:var(--cred-fg)}
+.kv.red{background:var(--deb-bg); color:var(--deb-fg)}
+.kv.blue{background:#DBEAFE; color:#1E40AF}
+.kv.acc{background:var(--accent); color:var(--navy)}
+h2{font-size:14px; color:var(--navy); margin:14px 0 8px 2px}
+.member{background:#FAFCFF; border:1px solid var(--border); border-radius:12px;
+        padding:10px 12px; margin-bottom:8px}
+.member .top{display:flex; justify-content:space-between; align-items:center}
+.member .nome{font-weight:700; color:var(--navy); font-size:15px}
+.member .pill{font-size:12px; font-weight:700; padding:3px 10px; border-radius:20px}
+.member .det{font-size:12px; color:var(--muted); margin-top:5px; line-height:1.5}
+.pareggio{background:var(--warn-bg); color:var(--warn-fg); font-size:14px; font-weight:600;
+          padding:9px 12px; border-radius:8px; margin-bottom:6px}
+.pareggio.ok{background:var(--cred-bg); color:var(--cred-fg)}
+.mov{background:var(--panel); border:1px solid var(--border); border-radius:12px;
+     padding:10px 12px; margin-bottom:8px; display:flex; align-items:center; gap:10px}
+.mov .ico{font-size:22px}
+.mov .mid{flex:1; min-width:0}
+.mov .t1{font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.mov .t2{font-size:12px; color:var(--muted); margin-top:2px}
+.mov .imp{font-size:15px; font-weight:800; white-space:nowrap}
+.mov .imp.v{color:var(--cred-fg)} .mov .imp.s{color:var(--deb-fg)}
+.filters{display:flex; gap:8px; margin-bottom:12px}
+.filters select{flex:1; padding:9px 10px; border:1px solid var(--border); border-radius:10px;
+                font-size:14px; background:var(--panel); color:var(--text)}
+.fab-bar{position:fixed; bottom:0; left:0; right:0; display:flex; gap:10px;
+         padding:12px 14px calc(12px + env(safe-area-inset-bottom)) 14px;
+         background:linear-gradient(transparent, var(--bg) 35%); z-index:30}
+.fab{flex:1; padding:14px 0; border:none; border-radius:14px; font-size:15px;
+     font-weight:700; color:#fff; box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.fab.vers{background:#1B5E20} .fab.spesa{background:#AD1457}
+.overlay{position:fixed; inset:0; background:rgba(15,25,45,.55); z-index:40;
+         display:none; align-items:flex-end; justify-content:center}
+.overlay.show{display:flex}
+.sheet{background:var(--panel); width:100%; max-width:520px; border-radius:18px 18px 0 0;
+       padding:18px 18px calc(20px + env(safe-area-inset-bottom)) 18px; max-height:92vh; overflow-y:auto}
+.sheet h3{font-size:16px; color:var(--navy); margin-bottom:14px}
+.field{margin-bottom:12px}
+.field label{display:block; font-size:12px; font-weight:700; color:var(--text); margin-bottom:5px}
+.field input,.field select{width:100%; padding:11px 12px; border:1px solid var(--border);
+       border-radius:10px; font-size:16px; background:#fff; color:var(--text)}
+.seg{display:flex; gap:8px; flex-wrap:wrap}
+.seg button{flex:1; min-width:80px; padding:10px 6px; border:1.5px solid var(--border);
+            border-radius:10px; background:#fff; font-size:14px; font-weight:600; color:var(--text)}
+.seg button.sel{background:var(--navy); color:#fff; border-color:var(--navy)}
+.sheet .actions{display:flex; gap:10px; margin-top:16px}
+.sheet .actions button{flex:1; padding:13px 0; border:none; border-radius:12px;
+                       font-size:15px; font-weight:700}
+.btn-cancel{background:#F3F4F6; color:var(--text)}
+.btn-save{background:var(--green); color:#fff}
+.btn-del{background:var(--deb-bg); color:var(--deb-fg)}
+.note{background:var(--accent); color:var(--navy); font-size:12px; padding:9px 11px;
+      border-radius:8px; margin-top:4px; line-height:1.5}
+.setup{padding:26px 20px; max-width:460px; margin:0 auto}
+.setup h2{font-size:18px; margin-bottom:6px}
+.setup p{font-size:14px; color:var(--muted); margin-bottom:16px; line-height:1.5}
+.setup .who{display:flex; flex-direction:column; gap:10px; margin-top:10px}
+.setup .who button{padding:16px; font-size:17px; font-weight:700; border:1.5px solid var(--border);
+                   border-radius:14px; background:var(--panel); color:var(--navy)}
+.toast{position:fixed; top:calc(14px + env(safe-area-inset-top)); left:50%;
+       transform:translateX(-50%); background:var(--navy); color:#fff; font-size:13px;
+       padding:9px 16px; border-radius:20px; z-index:60; opacity:0; transition:opacity .3s;
+       pointer-events:none; white-space:nowrap}
+.toast.show{opacity:1}
+.spin{text-align:center; color:var(--muted); font-size:13px; padding:26px 0}
+.err{background:var(--deb-bg); color:var(--deb-fg); font-size:13px; padding:10px 12px;
+     border-radius:10px; margin-bottom:10px; line-height:1.5}
+.reload-btn{background:none; border:none; color:#AAC4FF; font-size:20px; padding:4px 8px}
+</style>
+</head>
+<body>
+
+<!-- ═══ CONFIGURAZIONE ═══════════════════════════════════════════════════════
+     Incolla qui i valori del TUO progetto Supabase (vedi GUIDA_PWA.md).
+     Esempio: SUPABASE_URL = "https://abcdefgh.supabase.co";
+============================================================================ -->
+<script>
+const SUPABASE_URL = "https://znzxhddctuwbdecdadbn.supabase.co";
+const SUPABASE_KEY = "sb_publishable_1ZqUb9F1uxWnkOEJmGJeEA_NDd3_riR";
+const MEMBRI = ["Nino", "Cinzia", "Maria"];
+const CATEGORIE = ["Pulizie","Manutenzione","Utenze (luce/acqua/gas)","Giardino",
+                   "Ascensore","Assicurazione","Amministrazione","Spese straordinarie",
+                   "Imprevisti","Altro"];
+</script>
+
+<div id="app"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+"use strict";
+const FONDO = "Fondo";
+let sb = null;            // client supabase
+let movimenti = [];       // cache locale
+let tab = "bilancio";
+let filtroMese = "Tutti";
+let io = localStorage.getItem("fc_io") || "";   // chi sono
+let editing = null;       // movimento in modifica
+
+// ── Utility ──────────────────────────────────────────────────────────────────
+const $ = s => document.querySelector(s);
+const eur = x => "€ " + Number(x||0).toLocaleString("it-IT",{minimumFractionDigits:2, maximumFractionDigits:2});
+const esc = s => String(s??"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 2200); }
+function oggiISO(){ return new Date().toISOString().slice(0,10); }
+function dataIT(iso){ if(!iso) return ""; const [y,m,d]=iso.slice(0,10).split("-"); return `${d}/${m}/${y}`; }
+function meseKey(iso){ return iso ? iso.slice(0,7) : ""; }
+function meseLabel(k){ const [y,m]=k.split("-");
+  const nomi=["gen","feb","mar","apr","mag","giu","lug","ago","set","ott","nov","dic"];
+  return nomi[Number(m)-1]+" "+y; }
+
+// ── Bilancio (stessa matematica dell'app desktop) ────────────────────────────
+function totVersamenti(){ return movimenti.filter(m=>m.tipo==="Versamento")
+  .reduce((s,m)=>s+Number(m.importo),0); }
+function totSpese(){ return movimenti.filter(m=>m.tipo==="Spesa")
+  .reduce((s,m)=>s+Number(m.importo),0); }
+function fondoCassa(){ const sf = movimenti.filter(m=>m.tipo==="Spesa" &&
+  (m.pagatore||FONDO)===FONDO).reduce((s,m)=>s+Number(m.importo),0);
+  return totVersamenti()-sf; }
+function versato(mb){ return movimenti.filter(m=>m.tipo==="Versamento"&&m.membro===mb)
+  .reduce((s,m)=>s+Number(m.importo),0); }
+function anticipato(mb){ return movimenti.filter(m=>m.tipo==="Spesa"&&m.pagatore===mb)
+  .reduce((s,m)=>s+Number(m.importo),0); }
+function contributo(mb){ return versato(mb)+anticipato(mb); }
+function quota(){ return totSpese()/Math.max(1,MEMBRI.length); }
+function saldo(mb){ return contributo(mb)-quota(); }
+function pareggio(){
+  const n=Math.max(1,MEMBRI.length);
+  const saldi=Object.fromEntries(MEMBRI.map(m=>[m,saldo(m)]));
+  const media=Object.values(saldi).reduce((a,b)=>a+b,0)/n;
+  const net=Object.fromEntries(MEMBRI.map(m=>[m, Math.round((saldi[m]-media)*100)/100]));
+  const cred=MEMBRI.filter(m=>net[m]>0.005).map(m=>[m,net[m]]).sort((a,b)=>b[1]-a[1]);
+  const deb =MEMBRI.filter(m=>net[m]<-0.005).map(m=>[m,-net[m]]).sort((a,b)=>b[1]-a[1]);
+  const out=[]; let i=0,j=0;
+  while(i<deb.length && j<cred.length){
+    const x=Math.min(deb[i][1],cred[j][1]);
+    out.push([deb[i][0],cred[j][0],Math.round(x*100)/100]);
+    deb[i][1]-=x; cred[j][1]-=x;
+    if(deb[i][1]<=0.005) i++;
+    if(cred[j][1]<=0.005) j++;
+  }
+  return out;
+}
+
+// ── Supabase ─────────────────────────────────────────────────────────────────
+function getConfig(){
+  const url = localStorage.getItem("fc_url") || SUPABASE_URL;
+  const key = localStorage.getItem("fc_key") || SUPABASE_KEY;
+  return {url, key};
+}
+function connect(){
+  const {url, key} = getConfig();
+  if(!url || !key) return false;
+  try{ sb = supabase.createClient(url, key); return true; }
+  catch(e){ console.error(e); return false; }
+}
+async function loadData(){
+  if(!sb) return;
+  const {data, error} = await sb.from("movimenti").select("*")
+    .order("data",{ascending:false}).order("created_at",{ascending:false});
+  if(error){ render(errBox("Errore di connessione: "+esc(error.message))); return; }
+  movimenti = data || [];
+  render();
+}
+async function saveMov(rec){
+  if(editing){
+    const {error} = await sb.from("movimenti").update(rec).eq("id", editing.id);
+    if(error){ toast("Errore: "+error.message); return false; }
+  }else{
+    const {error} = await sb.from("movimenti").insert(rec);
+    if(error){ toast("Errore: "+error.message); return false; }
+  }
+  await loadData();
+  return true;
+}
+async function deleteMov(id){
+  const {error} = await sb.from("movimenti").delete().eq("id", id);
+  if(error){ toast("Errore: "+error.message); return; }
+  toast("Movimento eliminato");
+  await loadData();
+}
+function subscribeRealtime(){
+  if(!sb) return;
+  try{
+    sb.channel("mov-changes")
+      .on("postgres_changes",{event:"*",schema:"public",table:"movimenti"},
+          ()=>loadData())
+      .subscribe();
+  }catch(e){ /* realtime non essenziale */ }
+}
+
+// ── Rendering ────────────────────────────────────────────────────────────────
+function errBox(msg){ return `<main><div class="err">${msg}</div></main>`; }
+
+function render(extra){
+  const app = $("#app");
+  const {url, key} = getConfig();
+
+  if(!url || !key){ app.innerHTML = viewSetupCloud(); return; }
+  if(!io){ app.innerHTML = viewSetupNome(); return; }
+  if(extra){ app.innerHTML = extra; return; }
+
+  const fc = fondoCassa();
+  app.innerHTML = `
+  <header>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start">
+      <div>
+        <h1>🏢 Fondo Cassa</h1>
+        <div class="sub">${MEMBRI.join(" · ")} — quote in parti uguali</div>
+      </div>
+      <button class="reload-btn" onclick="loadData().then(()=>toast('Aggiornato'))">🔄</button>
+    </div>
+    <div class="fondo-box">
+      <span class="lbl">Fondo cassa disponibile</span>
+      <span class="val ${fc<0?"neg":""}">${eur(fc)}</span>
+    </div>
+  </header>
+  <nav class="tabs">
+    <button class="${tab==="bilancio"?"active":""}" onclick="setTab('bilancio')">Bilancio</button>
+    <button class="${tab==="movimenti"?"active":""}" onclick="setTab('movimenti')">Movimenti</button>
+  </nav>
+  <main>${tab==="bilancio" ? viewBilancio() : viewMovimenti()}</main>
+  <div class="fab-bar">
+    <button class="fab vers" onclick="openVersamento()">💰 Versamento</button>
+    <button class="fab spesa" onclick="openSpesa()">🧾 Spesa</button>
+  </div>
+  ${sheetHTML()}`;
+}
+
+function viewSetupCloud(){
+  return `<div class="setup">
+    <h2>⚙ Configurazione iniziale</h2>
+    <p>Collega l'app al database di famiglia (Supabase). Ti servono i due valori
+       indicati nella guida: chiedili a chi ha configurato l'app.</p>
+    <div class="field"><label>URL progetto Supabase</label>
+      <input id="cfg-url" placeholder="https://xxxx.supabase.co"></div>
+    <div class="field"><label>Chiave "anon public"</label>
+      <input id="cfg-key" placeholder="eyJhbGciOi..."></div>
+    <button class="fab vers" style="width:100%; margin-top:8px" onclick="salvaCfg()">Collega</button>
+  </div>`;
+}
+function salvaCfg(){
+  const u=$("#cfg-url").value.trim(), k=$("#cfg-key").value.trim();
+  if(!u.startsWith("https://") || !k){ toast("Controlla i due valori"); return; }
+  localStorage.setItem("fc_url",u); localStorage.setItem("fc_key",k);
+  init();
+}
+
+function viewSetupNome(){
+  return `<div class="setup">
+    <h2>👋 Chi sei?</h2>
+    <p>Scegli il tuo nome: verrà usato come predefinito per versamenti e spese.
+       Lo chiediamo una sola volta.</p>
+    <div class="who">
+      ${MEMBRI.map(m=>`<button onclick="setIo('${esc(m)}')">${esc(m)}</button>`).join("")}
+    </div>
+  </div>`;
+}
+function setIo(m){ io=m; localStorage.setItem("fc_io",m); render(); }
+
+function viewBilancio(){
+  const q = quota();
+  const membriHTML = MEMBRI.map(m=>{
+    const s = saldo(m);
+    let pill;
+    if(s>0.005) pill = `<span class="pill" style="background:var(--cred-bg);color:var(--cred-fg)">a credito ${eur(s)}</span>`;
+    else if(s<-0.005) pill = `<span class="pill" style="background:var(--deb-bg);color:var(--deb-fg)">deve ${eur(-s)}</span>`;
+    else pill = `<span class="pill" style="background:#F3F4F6;color:#6B7280">in pari</span>`;
+    return `<div class="member">
+      <div class="top"><span class="nome">${esc(m)}${m===io?" (tu)":""}</span>${pill}</div>
+      <div class="det">Versato ${eur(versato(m))} · Anticipato ${eur(anticipato(m))}<br>
+        Contributo ${eur(contributo(m))} − Quota ${eur(q)}</div>
+    </div>`;
+  }).join("");
+  const trans = pareggio();
+  const parHTML = trans.length
+    ? trans.map(([da,a,imp])=>`<div class="pareggio">${esc(da)} → ${esc(a)}: <b>${eur(imp)}</b></div>`).join("")
+    : `<div class="pareggio ok">✔ Tutti in pari, nessun conguaglio</div>`;
+  return `
+  <div class="card">
+    <div class="kv green"><span>Totale versato</span><b>${eur(totVersamenti())}</b></div>
+    <div class="kv red"><span>Totale speso</span><b>${eur(totSpese())}</b></div>
+    <div class="kv blue"><span>Fondo cassa</span><b>${eur(fondoCassa())}</b></div>
+    <div class="kv acc"><span>Quota a testa (1/${MEMBRI.length})</span><b>${eur(q)}</b></div>
+  </div>
+  <h2>Posizione di ciascuno</h2>${membriHTML}
+  <h2>Pareggio consigliato</h2>${parHTML}`;
+}
+
+function viewMovimenti(){
+  const mesi = [...new Set(movimenti.map(m=>meseKey(m.data)).filter(Boolean))].sort().reverse();
+  const movs = movimenti.filter(m => filtroMese==="Tutti" || meseKey(m.data)===filtroMese);
+  const lista = movs.length ? movs.map(m=>{
+    const isV = m.tipo==="Versamento";
+    const chi = isV ? m.membro
+      : ((m.pagatore||FONDO)===FONDO ? "dal Fondo" : `${m.pagatore} (anticipo)`);
+    const t1 = isV ? `Versamento di ${esc(m.membro||"?")}`
+                   : esc(m.categoria||"Spesa") + (m.descrizione?` — ${esc(m.descrizione)}`:"");
+    return `<div class="mov" onclick='openEdit("${m.id}")'>
+      <span class="ico">${isV?"💰":"🧾"}</span>
+      <div class="mid"><div class="t1">${t1}</div>
+        <div class="t2">${dataIT(m.data)} · ${esc(chi)}</div></div>
+      <span class="imp ${isV?"v":"s"}">${isV?"+":"−"} ${eur(m.importo)}</span>
+    </div>`;
+  }).join("") : `<div class="spin">Nessun movimento${filtroMese!=="Tutti"?" nel mese scelto":""}.</div>`;
+  return `
+  <div class="filters">
+    <select onchange="setFiltro(this.value)">
+      <option value="Tutti">Tutti i mesi</option>
+      ${mesi.map(k=>`<option value="${k}" ${k===filtroMese?"selected":""}>${meseLabel(k)}</option>`).join("")}
+    </select>
+  </div>${lista}`;
+}
+
+function setTab(t){ tab=t; render(); }
+function setFiltro(v){ filtroMese=v; render(); }
+
+// ── Sheet (form movimento) ───────────────────────────────────────────────────
+let sheetTipo = null;   // "Versamento" | "Spesa"
+let selMembro = null, selPagatore = null;
+
+function sheetHTML(){ return `<div class="overlay" id="ov" onclick="if(event.target===this)closeSheet()">
+  <div class="sheet" id="sheet"></div></div>`; }
+
+function openVersamento(mov){
+  sheetTipo="Versamento"; editing=mov||null;
+  selMembro = mov ? mov.membro : (MEMBRI.includes(io)?io:MEMBRI[0]);
+  $("#sheet").innerHTML = `
+    <h3>💰 ${editing?"Modifica versamento":"Versamento nel fondo"}</h3>
+    <div class="field"><label>Chi versa</label>
+      <div class="seg" id="seg-m">${MEMBRI.map(m=>
+        `<button class="${m===selMembro?"sel":""}" onclick="selM('${esc(m)}')">${esc(m)}</button>`).join("")}</div></div>
+    <div class="field"><label>Data</label>
+      <input type="date" id="f-data" value="${editing?editing.data.slice(0,10):oggiISO()}"></div>
+    <div class="field"><label>Importo €</label>
+      <input type="number" id="f-imp" inputmode="decimal" step="0.01" min="0"
+             value="${editing?editing.importo:""}" placeholder="0,00"></div>
+    <div class="field"><label>Descrizione (facoltativa)</label>
+      <input id="f-desc" value="${editing?esc(editing.descrizione||""):""}"></div>
+    <div class="actions">
+      ${editing?`<button class="btn-del" onclick="chiediElimina()">Elimina</button>`:""}
+      <button class="btn-cancel" onclick="closeSheet()">Annulla</button>
+      <button class="btn-save" onclick="salvaSheet()">Salva</button>
+    </div>`;
+  $("#ov").classList.add("show");
+}
+
+function openSpesa(mov){
+  sheetTipo="Spesa"; editing=mov||null;
+  selPagatore = mov ? (mov.pagatore||FONDO) : FONDO;
+  $("#sheet").innerHTML = `
+    <h3>🧾 ${editing?"Modifica spesa":"Spesa comune"}</h3>
+    <div class="field"><label>Data</label>
+      <input type="date" id="f-data" value="${editing?editing.data.slice(0,10):oggiISO()}"></div>
+    <div class="field"><label>Categoria</label>
+      <select id="f-cat">${CATEGORIE.map(c=>
+        `<option ${editing&&editing.categoria===c?"selected":""}>${c}</option>`).join("")}</select></div>
+    <div class="field"><label>Descrizione</label>
+      <input id="f-desc" value="${editing?esc(editing.descrizione||""):""}"></div>
+    <div class="field"><label>Importo €</label>
+      <input type="number" id="f-imp" inputmode="decimal" step="0.01" min="0"
+             value="${editing?editing.importo:""}" placeholder="0,00"></div>
+    <div class="field"><label>Pagato da</label>
+      <div class="seg" id="seg-p">
+        <button class="${selPagatore===FONDO?"sel":""}" onclick="selP('${FONDO}')">Fondo cassa</button>
+        ${MEMBRI.map(m=>`<button class="${m===selPagatore?"sel":""}"
+           onclick="selP('${esc(m)}')">${esc(m)}</button>`).join("")}
+      </div></div>
+    <div class="note">La spesa è comune e si divide in parti uguali.
+      Se paga una persona di tasca propria, l'importo le viene accreditato.</div>
+    <div class="actions">
+      ${editing?`<button class="btn-del" onclick="chiediElimina()">Elimina</button>`:""}
+      <button class="btn-cancel" onclick="closeSheet()">Annulla</button>
+      <button class="btn-save" onclick="salvaSheet()">Salva</button>
+    </div>`;
+  $("#ov").classList.add("show");
+}
+
+function selM(m){ selMembro=m;
+  document.querySelectorAll("#seg-m button").forEach(b=>b.classList.toggle("sel", b.textContent===m)); }
+function selP(p){ selPagatore=p;
+  document.querySelectorAll("#seg-p button").forEach(b=>
+    b.classList.toggle("sel", b.textContent===(p===FONDO?"Fondo cassa":p))); }
+
+function openEdit(id){
+  const m = movimenti.find(x=>String(x.id)===String(id));
+  if(!m) return;
+  if(m.tipo==="Versamento") openVersamento(m); else openSpesa(m);
+}
+
+async function salvaSheet(){
+  const imp = parseFloat(String($("#f-imp").value).replace(",","."));
+  const data = $("#f-data").value;
+  if(!(imp>0)){ toast("Inserisci un importo positivo"); return; }
+  if(!data){ toast("Inserisci la data"); return; }
+  let rec;
+  if(sheetTipo==="Versamento"){
+    rec = { tipo:"Versamento", membro:selMembro, pagatore:null, data,
+            categoria:null, descrizione:$("#f-desc").value.trim(),
+            importo:Math.round(imp*100)/100 };
+  }else{
+    rec = { tipo:"Spesa", membro:null, pagatore:selPagatore, data,
+            categoria:$("#f-cat").value, descrizione:$("#f-desc").value.trim(),
+            importo:Math.round(imp*100)/100 };
+  }
+  const ok = await saveMov(rec);
+  if(ok){ closeSheet(); toast(editing?"Movimento aggiornato":"Salvato"); }
+}
+
+function chiediElimina(){
+  if(!editing) return;
+  if(confirm("Eliminare questo movimento?")){
+    const id = editing.id;
+    closeSheet();
+    deleteMov(id);
+  }
+}
+function closeSheet(){ $("#ov").classList.remove("show"); editing=null; }
+
+// ── Avvio ────────────────────────────────────────────────────────────────────
+async function init(){
+  if(!connect()){ render(); return; }   // mostra setup se mancano le chiavi
+  render(`<main><div class="spin">Caricamento…</div></main>`);
+  await loadData();
+  subscribeRealtime();
+}
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && sb) loadData(); });
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }
+init();
+</script>
+</body>
+</html>
