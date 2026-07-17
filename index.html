@@ -250,7 +250,10 @@ function render(extra){
         <h1>🏢 Fondo Cassa</h1>
         <div class="sub">${MEMBRI.join(" · ")} — quote in parti uguali</div>
       </div>
-      <button class="reload-btn" onclick="loadData().then(()=>toast('Aggiornato'))">🔄</button>
+      <span>
+        <button class="reload-btn" onclick="exportExcel()" title="Esporta Excel">📊</button>
+        <button class="reload-btn" onclick="loadData().then(()=>toast('Aggiornato'))">🔄</button>
+      </span>
     </div>
     <div class="fondo-box">
       <span class="lbl">Fondo cassa disponibile</span>
@@ -458,6 +461,84 @@ function chiediElimina(){
   }
 }
 function closeSheet(){ $("#ov").classList.remove("show"); editing=null; }
+
+// ── Export Excel ─────────────────────────────────────────────────────────────
+function loadScript(src){
+  return new Promise((ok, ko)=>{
+    const s=document.createElement("script");
+    s.src=src; s.onload=ok; s.onerror=()=>ko(new Error("download fallito"));
+    document.head.appendChild(s);
+  });
+}
+
+async function exportExcel(){
+  try{
+    if(!window.XLSX){
+      toast("Preparo l'export…");
+      await loadScript("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js");
+    }
+  }catch(e){ toast("Serve la connessione internet per l'export"); return; }
+  if(!movimenti.length){ toast("Nessun movimento da esportare"); return; }
+
+  // Mese selezionato nel filtro (tab Movimenti): esporta SOLO quel mese.
+  // Con "Tutti" esporta l'intero registro.
+  const mese = filtroMese;
+  const movExport = movimenti.filter(m => mese==="Tutti" || meseKey(m.data)===mese);
+  if(!movExport.length){ toast("Nessun movimento nel mese scelto"); return; }
+  const etichetta = mese==="Tutti" ? "completo" : meseLabel(mese);
+
+  // ── Foglio Movimenti (dal più vecchio al più recente) ──────────────────────
+  const rows = [["Registro " + etichetta],
+                ["Data","Tipo","Chi / Pagatore","Categoria","Descrizione","Importo €","Note"]];
+  [...movExport].sort((a,b)=>String(a.data).localeCompare(String(b.data)))
+    .forEach(m=>{
+      const isV = m.tipo==="Versamento";
+      const chi = isV ? (m.membro||"")
+        : ((m.pagatore||FONDO)===FONDO ? "Fondo" : `${m.pagatore} (anticipo)`);
+      rows.push([dataIT(m.data), m.tipo, chi, m.categoria||"", m.descrizione||"",
+                 Number(m.importo), m.note||""]);
+    });
+  // Totali del periodo esportato
+  const vMese = movExport.filter(m=>m.tipo==="Versamento").reduce((s,m)=>s+Number(m.importo),0);
+  const sMese = movExport.filter(m=>m.tipo==="Spesa").reduce((s,m)=>s+Number(m.importo),0);
+  rows.push([]);
+  rows.push(["","","","","Versamenti del periodo", vMese]);
+  rows.push(["","","","","Spese del periodo", sMese]);
+  const wsM = XLSX.utils.aoa_to_sheet(rows);
+  wsM["!cols"] = [{wch:11},{wch:12},{wch:18},{wch:22},{wch:28},{wch:11},{wch:20}];
+
+  // ── Foglio Bilancio ────────────────────────────────────────────────────────
+  const q = quota();
+  const b = [["Bilancio complessivo al " + dataIT(oggiISO())],
+             ["Membro","Versato €","Anticipato €","Contributo €","Quota €","Saldo €"]];
+  MEMBRI.forEach(m=>{
+    b.push([m, versato(m), anticipato(m), contributo(m), q, saldo(m)]);
+  });
+  b.push([]);
+  b.push(["Totale versato", totVersamenti()]);
+  b.push(["Totale speso", totSpese()]);
+  b.push(["Fondo cassa", fondoCassa()]);
+  b.push([]);
+  b.push(["Pareggio consigliato"]);
+  const trans = pareggio();
+  if(trans.length){
+    trans.forEach(([da,a,imp])=> b.push([`${da} → ${a}`, imp]));
+  }else{
+    b.push(["Tutti in pari"]);
+  }
+  const wsB = XLSX.utils.aoa_to_sheet(b);
+  wsB["!cols"] = [{wch:20},{wch:13},{wch:13},{wch:13},{wch:13},{wch:13}];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, wsM, "Movimenti");
+  XLSX.utils.book_append_sheet(wb, wsB, "Bilancio");
+  // Nome file pensato per l'archivio storico: un file per mese
+  const nome = mese==="Tutti"
+    ? "FondoCassa_completo_" + oggiISO().replaceAll("-","") + ".xlsx"
+    : "FondoCassa_" + mese + ".xlsx";
+  XLSX.writeFile(wb, nome);
+  toast("Excel esportato: " + nome);
+}
 
 // ── Avvio ────────────────────────────────────────────────────────────────────
 async function init(){
