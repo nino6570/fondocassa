@@ -1,0 +1,31 @@
+.github/workflows/backup.yml
+name: Backup e keep-alive fondo cassa
+
+on:
+  schedule:
+    - cron: '0 6 * * 1,4'    # lunedì e giovedì alle 06:00 UTC
+  workflow_dispatch:          # consente anche l'avvio manuale
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scarica i movimenti dal database (tiene sveglio Supabase)
+        run: |
+          mkdir -p backup
+          curl -sf "https://znzxhddctuwbdecdadbn.supabase.co/rest/v1/movimenti?select=*&order=data" \
+            -H "apikey: sb_publishable_1ZqUb9F1uxWnkOEJmGJeEA_NDd3_riR" \
+            -o backup/movimenti.json
+          python3 -c "import json; d=json.load(open('backup/movimenti.json')); print('Movimenti salvati:', len(d))"
+
+      - name: Salva il backup nel repository
+        run: |
+          git config user.name "backup-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add backup/movimenti.json
+          git diff --cached --quiet || git commit -m "Backup automatico movimenti"
+          git push
