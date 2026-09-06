@@ -1,4 +1,4 @@
-.github/workflows/backup.yml
+
 name: Backup e keep-alive fondo cassa
 
 on:
