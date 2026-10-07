@@ -1,0 +1,25 @@
+Supabase keep-alive
+on:
+  schedule:
+    - cron: "23 6 */3 * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ping Supabase
+        run: |
+          curl -s -o /dev/null -w "Supabase HTTP %{http_code}\n" \
+            "https://znzxhddctuwbdecdadbn.supabase.co/rest/v1/movimenti?select=id&limit=1" \
+            -H "apikey: sb_publishable_1ZqUb9F1uxWnkOEJmGJeEA_NDd3_riR"
+      - name: Battito
+        run: |
+          date -u > keepalive.txt
+          git config user.name "keepalive-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add keepalive.txt
+          git commit -m "keepalive $(date -u +%F)" || echo "nessuna modifica"
+          git push
